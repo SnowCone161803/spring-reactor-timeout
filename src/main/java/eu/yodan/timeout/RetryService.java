@@ -60,13 +60,13 @@ public class RetryService {
             .flatMap(i -> Mono.error(TimeoutException::new));
     }
 
-    private class RetryLimitException extends Exception {
+    private static class RetryLimitException extends Exception {
         RetryLimitException() {
             super("retry limit reached");
         }
     }
 
-    private class TimeoutException extends Exception {
+    private static class TimeoutException extends Exception {
         TimeoutException() {
             super("timeout reached");
         }

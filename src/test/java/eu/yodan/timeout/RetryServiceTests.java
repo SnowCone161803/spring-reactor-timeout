@@ -16,6 +16,9 @@ import java.time.Duration;
 @ContextConfiguration(classes={RetryService.class})
 public class RetryServiceTests {
 
+    final Duration DURATION = Duration.ofSeconds(1);
+    final int NUMBER_OF_ATTEMPTS = 10;
+
     @Autowired
     RetryService retryService;
 
@@ -29,6 +32,13 @@ public class RetryServiceTests {
         }
         count = 0;
         return "success";
+    }
+
+    @Test
+    public void test_exponentialBackoff() throws Exception {
+        final var flux = retryService.exponentialBackoffDurations(DURATION, NUMBER_OF_ATTEMPTS);
+        flux.map(Duration::toMillis)
+            .subscribe(System.out::println);
     }
 
     @Test

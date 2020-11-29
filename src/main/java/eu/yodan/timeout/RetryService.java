@@ -45,6 +45,19 @@ public class RetryService {
             .onErrorStop();
     }
 
+    public Flux<Duration> exponentialBackoffDurations(final Duration instanceTimeout, int numberOfAttempts) {
+        final var retries = Flux.range(0, numberOfAttempts)
+            .map(i -> {
+                final long multiplier = (long) Math.pow(2, i);
+                return instanceTimeout.multipliedBy(multiplier);
+            });
+        return Flux.concat(
+            Mono.just(Duration.ZERO),
+            retries)
+            .take(numberOfAttempts)
+            .checkpoint("exponential backoff durations");
+    }
+
     private class TimeoutException extends RuntimeException {
 
         TimeoutException() {

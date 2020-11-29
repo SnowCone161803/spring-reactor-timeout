@@ -20,13 +20,13 @@ public class RetryService {
         Duration timeout,
         int numberOfAttempts) {
 
-        return attemptsWithBackoffApplied(timeout, numberOfAttempts)
+        return durationsWithBackoffAppliedToFlux(timeout, numberOfAttempts)
             .map((i) -> callableToResultOrEmptyOptionalOnError(thingToRetry))
             .filter(Optional::isPresent)
             .map(Optional::get);
     }
 
-    private Flux<Duration> attemptsWithBackoffApplied(Duration timeout, int numberOfAttempts) {
+    private Flux<Duration> durationsWithBackoffAppliedToFlux(Duration timeout, int numberOfAttempts) {
         final var allDurationsSpacedInTime = this.exponentialBackoffDurations(timeout, numberOfAttempts)
             .concatMap(RetryService::singleItemIntervalFluxOfDuration);
 

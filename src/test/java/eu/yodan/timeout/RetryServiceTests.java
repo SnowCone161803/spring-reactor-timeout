@@ -26,7 +26,7 @@ public class RetryServiceTests {
 
     public String test()  {
         log.debug("attempt made");
-        if (count < 2) {
+        if (count < 5) {
             count++;
             return null;
         }
@@ -35,11 +35,11 @@ public class RetryServiceTests {
     }
 
     @Test
-    public void test_exponentialBackoff() throws Exception {
-        final var flux = retryService.secondRetryThing(this::test, DURATION, NUMBER_OF_ATTEMPTS);
+    public void testWithRealTime_exponentialBackoffRetry() throws Exception {
+        final var flux = retryService.retry(this::test, DURATION, 2);
         flux.subscribe(System.out::println);
 
-        Thread.sleep(10_000L);
+        Thread.sleep(90_000L);
     }
 
     @Test

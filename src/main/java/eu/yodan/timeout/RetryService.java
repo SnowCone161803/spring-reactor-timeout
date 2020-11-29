@@ -42,6 +42,7 @@ public class RetryService {
 
     private Flux<Duration> exponentialBackoffDurations(final Duration timeout, int numberOfAttempts) {
         final var initialDuration = Mono.just(Duration.ZERO);
+        // TODO: refactor this to return an infinite flux, and remove numberOfAttempts from the paramters
         final var retryDurations = Flux.range(0, numberOfAttempts + 10)
             .map(i -> {
                 final long multiplier = (long) Math.pow(2, i);

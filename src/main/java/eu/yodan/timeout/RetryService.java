@@ -20,7 +20,7 @@ public class RetryService {
         Duration timeout,
         int numberOfAttempts) {
 
-        return firstSuccessOrFailureWithBackoff(timeout, numberOfAttempts)
+        return successesWithBackoff(timeout, numberOfAttempts)
             .map((i) -> callCallableAndReturnOptional(thingToRetry))
             .filter(Optional::isPresent)
             .map(Optional::get);
@@ -34,7 +34,7 @@ public class RetryService {
         }
     }
 
-    private Flux<Duration> firstSuccessOrFailureWithBackoff(Duration timeout, int numberOfAttempts) {
+    private Flux<Duration> successesWithBackoff(Duration timeout, int numberOfAttempts) {
         final var allDurationsWithIntervals = this.exponentialBackoffDurations(timeout, numberOfAttempts)
             .concatMap(duration -> Flux.interval(duration).take(1).map(i -> duration));
 
@@ -50,7 +50,6 @@ public class RetryService {
             limitedNumberOfAttempts,
             maxTimeout)
             .checkpoint("exponential backoff durations with intervals")
-            .take(1)
             .onErrorStop();
     }
 

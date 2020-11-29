@@ -15,48 +15,29 @@ public class RetryService {
 
     private static final Duration MAX_TIMEOUT = Duration.ofSeconds(60);
 
-    public <T> Flux<T> retry(
+    public <T> Flux<T> retryWithBackoff(
         final Supplier<T> thingToRetry,
         Duration timeout,
         int numberOfAttempts) {
 
-        return successesWithBackoff(timeout, numberOfAttempts)
-            .map((i) -> callCallableAndReturnOptional(thingToRetry))
+        return attemptsWithBackoffApplied(timeout, numberOfAttempts)
+            .map((i) -> callableToResultOrEmptyOptionalOnError(thingToRetry))
             .filter(Optional::isPresent)
             .map(Optional::get);
     }
 
-    private <T> Optional<T> callCallableAndReturnOptional(Supplier<T> callable) {
-        try {
-            return Optional.of(callable.get());
-        } catch (Throwable t) {
-            return Optional.empty();
-        }
-    }
+    private Flux<Duration> attemptsWithBackoffApplied(Duration timeout, int numberOfAttempts) {
+        final var allDurationsSpacedInTime = this.exponentialBackoffDurations(timeout, numberOfAttempts)
+            .concatMap(RetryService::singleItemIntervalFluxOfDuration);
 
-    private Flux<Duration> successesWithBackoff(Duration timeout, int numberOfAttempts) {
-        final var allDurationsWithIntervals = this.exponentialBackoffDurations(timeout, numberOfAttempts)
-            .concatMap(this::singleItemIntervalFluxOfDuration);
-
-        final var limitedNumberOfAttempts = Flux.concat(
-            allDurationsWithIntervals.take(numberOfAttempts),
+        final var allAttempts = Flux.concat(
+            allDurationsSpacedInTime.take(numberOfAttempts),
             Mono.error(RetryLimitException::new)
         );
 
-        final Flux<Duration> maxTimeout = Flux.interval(MAX_TIMEOUT)
-            .map(i -> { throw new TimeoutException(); });
-
-        return Flux.merge(
-            limitedNumberOfAttempts,
-            maxTimeout)
+        return Flux.merge(allAttempts, maxTimeout())
             .checkpoint("exponential backoff durations with intervals")
             .onErrorStop();
-    }
-
-    private Flux<Duration> singleItemIntervalFluxOfDuration(Duration duration) {
-        return Flux.interval(duration)
-            .take(1)
-            .map(i -> duration);
     }
 
     private Flux<Duration> exponentialBackoffDurations(final Duration timeout, int numberOfAttempts) {
@@ -72,6 +53,13 @@ public class RetryService {
             .checkpoint("exponential backoff durations");
     }
 
+    private Flux<Duration> maxTimeout() {
+        return Flux.interval(MAX_TIMEOUT)
+            .map(i -> {
+                throw new TimeoutException();
+            });
+    }
+
     private class RetryLimitException extends RuntimeException {
         RetryLimitException() {
             super("retry limit reached");
@@ -81,6 +69,20 @@ public class RetryService {
     private class TimeoutException extends RuntimeException {
         TimeoutException() {
             super("timeout reached");
+        }
+    }
+
+    private static Flux<Duration> singleItemIntervalFluxOfDuration(Duration duration) {
+        return Flux.interval(duration)
+            .take(1)
+            .map(i -> duration);
+    }
+
+    private static <T> Optional<T> callableToResultOrEmptyOptionalOnError(Supplier<T> callable) {
+        try {
+            return Optional.of(callable.get());
+        } catch (Throwable t) {
+            return Optional.empty();
         }
     }
 }

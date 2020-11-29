@@ -21,6 +21,7 @@ public class RetryService {
         int numberOfAttempts) {
 
         return fluxWithBackoffApplied(timeout, numberOfAttempts)
+            // TODO: there should be a better way to deal with Exceptions than this
             .map((d) -> callableToOptionalOrEmptyOnError(thingToRetry))
             .filter(Optional::isPresent)
             .map(Optional::get);

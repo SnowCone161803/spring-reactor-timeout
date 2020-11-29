@@ -55,18 +55,16 @@ public class RetryService {
 
     private Flux<Duration> maxTimeout() {
         return Flux.interval(MAX_TIMEOUT)
-            .map(i -> {
-                throw new TimeoutException();
-            });
+            .flatMap(i -> Mono.error(TimeoutException::new));
     }
 
-    private class RetryLimitException extends RuntimeException {
+    private class RetryLimitException extends Exception {
         RetryLimitException() {
             super("retry limit reached");
         }
     }
 
-    private class TimeoutException extends RuntimeException {
+    private class TimeoutException extends Exception {
         TimeoutException() {
             super("timeout reached");
         }

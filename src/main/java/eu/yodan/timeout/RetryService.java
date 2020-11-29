@@ -19,33 +19,40 @@ public class RetryService {
 
     private ImmutableSet<Long> retryTimes = ImmutableSet.of(0L,1L,2L,4L,8L,16L,32L);
 
-    public <T> Flux<T> retryThing(final Supplier<T> thingToRetry, final int times) {
-        final var firstAttempt = Mono.just(0);
-        final var restOfAttempts = Flux.interval(Duration.ofSeconds(1))
-            .map(i -> i + 1);
-        final var allAttempts = Flux.concat(firstAttempt, restOfAttempts)
-            .filter(i -> {
-                System.out.println(i);
-                return this.retryTimes.contains(i);
-            })
-            .doOnNext(i -> System.out.println("allAttempts attempt number: " + i))
-            .take(times)
-            .doOnNext(i -> System.out.println("allAttempts attempt number after take: " + i));
+    public <T> Flux<T> secondRetryThing(
+        final Supplier<T> thingToRetry,
+        Duration timeout,
+        int numberOfAttempts) {
 
-        final var madeAttempts = allAttempts
-            .map(attempt -> Optional.ofNullable(thingToRetry.get()));
-        final var successfulAttempts = madeAttempts
+        final Flux<T> successfulAttempts = exponentialBackoffDurationsWithIntervals(timeout, numberOfAttempts)
+            .map((i) -> callCallableAndReturnOptional(thingToRetry))
             .filter(Optional::isPresent)
             .map(Optional::get);
 
-        final var timedOut = Flux.interval(MAX_TIMEOUT)
-            .flatMap(i -> Mono.<T>error(TimeoutException::new));
-        return Flux.merge(successfulAttempts, timedOut)
+        final Flux<T> maxTimeout = Flux.interval(MAX_TIMEOUT)
+            .map(i -> { throw new TimeoutException(); });
+
+        return Flux.merge(successfulAttempts, maxTimeout)
             .take(1)
             .onErrorStop();
     }
 
-    public Flux<Duration> exponentialBackoffDurations(final Duration instanceTimeout, int numberOfAttempts) {
+    private <T> Optional<T> callCallableAndReturnOptional(Supplier<T> callable) {
+        try {
+            final T result = callable.get();
+            return Optional.<T>ofNullable(result);
+        } catch (Throwable t) {
+            return Optional.empty();
+        }
+    }
+
+    private Flux<Duration> exponentialBackoffDurationsWithIntervals(Duration timeout, int numberOfAttempts) {
+        return this.exponentialBackoffDurations(timeout, numberOfAttempts)
+            .concatMap(duration -> Flux.interval(duration).take(1).map(i -> duration))
+            .take(numberOfAttempts);
+    }
+
+    private Flux<Duration> exponentialBackoffDurations(final Duration instanceTimeout, int numberOfAttempts) {
         final var retries = Flux.range(0, numberOfAttempts)
             .map(i -> {
                 final long multiplier = (long) Math.pow(2, i);

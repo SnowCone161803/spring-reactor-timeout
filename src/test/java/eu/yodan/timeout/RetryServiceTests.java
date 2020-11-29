@@ -36,16 +36,8 @@ public class RetryServiceTests {
 
     @Test
     public void test_exponentialBackoff() throws Exception {
-        final var flux = retryService.exponentialBackoffDurations(DURATION, NUMBER_OF_ATTEMPTS);
-        flux.map(Duration::toMillis)
-            .subscribe(System.out::println);
-    }
-
-    @Test
-    public void test_retryServiceWorksAsExpected() throws Exception {
-        final var result = retryService.retryThing(this::test, 6);
-
-        result.subscribe(System.out::println);
+        final var flux = retryService.secondRetryThing(this::test, DURATION, NUMBER_OF_ATTEMPTS);
+        flux.subscribe(System.out::println);
 
         Thread.sleep(10_000L);
     }

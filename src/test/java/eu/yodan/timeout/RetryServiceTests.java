@@ -41,16 +41,4 @@ public class RetryServiceTests {
 
         Thread.sleep(90_000L);
     }
-
-    @Test
-    public void test_concatMonoWithInterval() throws Exception {
-        final var start = Mono.just(-100);
-        final var rest = Flux.interval(Duration.ofMillis(100));
-
-        final var all  = Flux.concat(start, rest);
-
-        all.subscribe(System.out::println);
-
-        Thread.sleep(10_000L);
-    }
 }

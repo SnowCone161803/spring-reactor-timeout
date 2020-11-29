@@ -54,12 +54,12 @@ public class RetryService {
             .onErrorStop();
     }
 
-    private Flux<Duration> exponentialBackoffDurations(final Duration instanceTimeout, int numberOfAttempts) {
+    private Flux<Duration> exponentialBackoffDurations(final Duration timeout, int numberOfAttempts) {
         final var initialDuration = Mono.just(Duration.ZERO);
         final var retryDurations = Flux.range(0, numberOfAttempts + 10)
             .map(i -> {
                 final long multiplier = (long) Math.pow(2, i);
-                return instanceTimeout.multipliedBy(multiplier);
+                return timeout.multipliedBy(multiplier);
             });
         return Flux.concat(
             initialDuration,

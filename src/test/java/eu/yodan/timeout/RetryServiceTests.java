@@ -36,7 +36,7 @@ public class RetryServiceTests {
 
     @Test
     public void testWithRealTime_exponentialBackoffRetry() throws Exception {
-        final var flux = retryService.retry(this::test, DURATION, 2);
+        final var flux = retryService.retry(this::test, DURATION, 4);
         flux.subscribe(System.out::println);
 
         Thread.sleep(90_000L);

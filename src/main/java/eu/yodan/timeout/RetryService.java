@@ -36,7 +36,7 @@ public class RetryService {
 
     private Flux<Duration> successesWithBackoff(Duration timeout, int numberOfAttempts) {
         final var allDurationsWithIntervals = this.exponentialBackoffDurations(timeout, numberOfAttempts)
-            .concatMap(duration -> Flux.interval(duration).take(1).map(i -> duration));
+            .concatMap(this::singleItemIntervalFluxOfDuration);
 
         final var limitedNumberOfAttempts = Flux.concat(
             allDurationsWithIntervals.take(numberOfAttempts),
@@ -51,6 +51,12 @@ public class RetryService {
             maxTimeout)
             .checkpoint("exponential backoff durations with intervals")
             .onErrorStop();
+    }
+
+    private Flux<Duration> singleItemIntervalFluxOfDuration(Duration duration) {
+        return Flux.interval(duration)
+            .take(1)
+            .map(i -> duration);
     }
 
     private Flux<Duration> exponentialBackoffDurations(final Duration timeout, int numberOfAttempts) {
